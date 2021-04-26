@@ -61,13 +61,14 @@ const actions: WpSource["actions"]["source"] = {
     // Get and execute the corresponding handler based on path.
     try {
       let { route } = linkParams;
+      console.log('km debug route', route);
       // Transform route if there is some redirection.
       const redirection = getMatch(route, redirections);
       if (redirection) route = redirection.func(redirection.params);
 
       // Get the handler for this route.
       const handler = getMatch(`${route}${queryString}`, handlers);
-
+      console.log('km debug route', handler);
       // Return a 404 error if no handler has matched.
       if (!handler)
         throw new ServerError(
@@ -105,8 +106,8 @@ const actions: WpSource["actions"]["source"] = {
     } catch (e) {
       // It's a server error (4xx or 5xx).
       if (e instanceof ServerError) {
+        console.log('km debug error');
         console.error(e);
-
         const errorData: ErrorData = {
           isError: true,
           isReady: true,
@@ -204,6 +205,7 @@ const actions: WpSource["actions"]["source"] = {
     } = state.source;
 
     if (homepage) {
+      console.log('km debug chekc homepage load', homepage);
       const pattern = concatLink(subdirectory);
       redirections.push({
         name: "homepage",
