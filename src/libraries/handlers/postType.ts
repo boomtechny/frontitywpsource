@@ -88,8 +88,7 @@ const postTypeHandler = ({
       if (populated.length > 0) {
         total = getTotal(response, populated.length);
         totalPages = getTotalPages(response, 0);
-        console.log('km debug total items', total);
-        console.log('km debug total pages', totalPages);
+      
         if(totalPages>0){
           for(let i=1; i<=totalPages;i++){
             const response = await libraries.source.api.get({
