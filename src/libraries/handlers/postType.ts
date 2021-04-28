@@ -2,6 +2,7 @@ import { Handler } from "../../../types";
 import capitalize from "./utils/capitalize";
 import { ServerError } from "@frontity/source";
 import { PostTypeData } from "@frontity/source/types/data";
+import { tr } from "date-fns/locale";
 
 /**
  * The parameters for {@link postTypeHandler}.
@@ -54,6 +55,7 @@ const postTypeHandler = ({
 
   // 1. search id in state or get the entity from WP REST API
   const { route, query } = libraries.source.parse(link);
+  const {  getTotal, getTotalPages } = libraries.source;
   const routeData: Partial<PostTypeData> = state.source.get(route);
   if (!routeData.id || force) {
     const { slug } = params;
@@ -67,10 +69,14 @@ const postTypeHandler = ({
     let isHandled = false;
     let isMismatched = false;
     for (const endpoint of finalEndpoints) {
+      let total; 
+      let totalPages; 
+      let fullItemsArray =[] ;
       const response = await libraries.source.api.get({
         endpoint,
-        params: { slug, _embed: true, ...state.source.params },
+        params: { slug, per_page:50, _embed: true, ...state.source.params },
       });
+      
 
       const populated = await libraries.source.populate({
         response,
@@ -80,16 +86,56 @@ const postTypeHandler = ({
 
       // exit loop if this endpoint returns an entity!
       if (populated.length > 0) {
-        // We have to check if the link property in the data that we
-        // populated is the same as the current route.
-        if (populated[0].link === route) {
-          isHandled = true;
-          isMismatched = false;
-          matchedEndpoint = endpoint;
-          break;
-        } else {
-          isMismatched = true;
+        total = getTotal(response, populated.length);
+        totalPages = getTotalPages(response, 0);
+        console.log('km debug total items', total);
+        console.log('km debug total pages', totalPages);
+        if(totalPages>0){
+          for(let i=1; i<=totalPages;i++){
+            const response = await libraries.source.api.get({
+              endpoint,
+              params: { slug, page:i, per_page:50,_embed: true, ...state.source.params },
+            });
+            const populated = await libraries.source.populate({
+              response,
+              state,
+              force,
+            });
+            if (populated.length > 0) {
+          //   console.log('populated', populated); 
+             fullItemsArray = [...fullItemsArray,...populated]
+            }
+
+          }
+
+        // console.log('check full items array', JSON.stringify(fullItemsArray));
+          let trueRouteKey =Object.keys(fullItemsArray).filter((x)=>{if(fullItemsArray[x].link ===route){return x;}});
+          // We have to check if the link property in the data that we
+          // populated is the same as the current route.
+        //  console.log('check true route',trueRouteKey);
+if(trueRouteKey.length>0){
+          if ( fullItemsArray[trueRouteKey].link ===route ) {
+            isHandled = true;
+            isMismatched = false;
+            matchedEndpoint = endpoint;
+            break;
+          } else {
+            isMismatched = true;
+          }
+
         }
+        else{
+          if (populated[0].link === route ) {
+            isHandled = true;
+            isMismatched = false;
+            matchedEndpoint = endpoint;
+            break;
+          } else {
+            isMismatched = true;
+          }
+        }
+      }
+     
       }
     }
 
